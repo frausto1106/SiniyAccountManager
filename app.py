@@ -4,16 +4,16 @@ import os
 import sys
 from types import FrameType
 from flask import Flask, jsonify, Response, request, redirect
-import uuid
-from sqlalchemy.dialects.postgresql import UUID
-from datetime import datetime
+
 from utils.logging import logger
 from flask_sqlalchemy import SQLAlchemy
 from functools import wraps
 import firebase_admin
 from google.cloud.sql.connector import Connector
-from firebase_admin import credentials, storage, auth, initialize_app
+from firebase_admin import credentials, auth
 
+
+#para ocupar los servicios se tine que agregar un token de autenticaion de firebase en el header de la peticion
 #se tienen que agregar a las variables de entorno de cloud run DB_USER, DB_PASS, DB_NAME
 app = Flask(__name__)
 
@@ -65,7 +65,6 @@ dbp = SQLAlchemy()
 dbp.init_app(app)
 
 
-# New User model based on the provided schema
 class User(dbp.Model):
     __tablename__ = 'users'
     userid = dbp.Column(dbp.String(100), primary_key=True)
@@ -77,6 +76,7 @@ class User(dbp.Model):
     country = dbp.Column(dbp.String(100), nullable=True)
 
 
+# agrega un nuevo usuario a la base de datos
 @app.route('/users', methods=['POST'])
 @token_required
 def create_user():
@@ -100,7 +100,7 @@ def create_user():
     except  Exception as e:
         print(e)
 
-
+# obtine un usuario por su id
 @app.route('/users/<string:userid>', methods=['GET'])
 @token_required
 def get_user(userid):
@@ -124,7 +124,7 @@ def get_user(userid):
         'country': user.country
     })
 
-
+# actualiza un usuario por su id, se tiene que nviar los atributos que se quieren actualizar
 @app.route('/users/<string:userid>', methods=['PUT'])
 @token_required
 def update_user(userid):
@@ -148,7 +148,7 @@ def update_user(userid):
         print(f"Error committing changes: {e}")
         return jsonify({'message': 'Failed to update user'}), 500
 
-
+#verifica si un usuario existe por su id, debuelve un valor booleano
 @app.route('/users/check/<string:userid>', methods=['GET'])
 @token_required
 def check_user_exists(userid):
@@ -161,7 +161,7 @@ def check_user_exists(userid):
 @app.route("/")
 def hello() -> str:
     logger.info("Child logger with trace Id.")
-    return redirect("https://kidtales.app")
+    return Response(status=200)
 
 
 def shutdown_handler(signal_int: int, frame: FrameType) -> None:
@@ -179,3 +179,4 @@ if __name__ == "__main__":
 else:
     # handles Cloud Run container termination
     signal.signal(signal.SIGTERM, shutdown_handler)
+
